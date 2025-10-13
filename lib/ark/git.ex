@@ -20,6 +20,7 @@ defmodule Ark.Git do
   - Argos (1B): Sistema de ejecución y orquestación
   - Aegis (2): Framework CLI/TUI completo
   """
+  import Argos.Command
 
   alias Aurora.Color
   alias Aurora.Structs.ChunkText
@@ -67,10 +68,10 @@ defmodule Ark.Git do
   end
 
   def branch_exists?(branch) do
-    result_local = Argos.exec_command("git show-ref --verify --quiet refs/heads/#{branch}")
+    result_local = exec_silent!("git show-ref --verify --quiet refs/heads/#{branch}")
     exists_local = result_local.success?
 
-    result_remote = Argos.exec_command("git ls-remote --exit-code --heads origin #{branch}")
+    result_remote = exec_silent!("git ls-remote --exit-code --heads origin #{branch}")
     exists_remote = result_remote.success?
 
     exists_local or exists_remote
@@ -79,10 +80,9 @@ defmodule Ark.Git do
   def ensure_clone(nil), do: {:error, :no_repo_defined}
 
   def ensure_clone(repos, workspace_path) when is_list(repos) do
-    _checked_repos =
-      Enum.map(repos, fn %{repo: repo} ->
-        ensure_clone(repo, workspace_path)
-      end)
+    Enum.map(repos, fn %{repo: repo} ->
+      ensure_clone(repo, workspace_path)
+    end)
 
     repos
     |> Enum.map(& &1.repo)
@@ -198,7 +198,8 @@ defmodule Ark.Git do
   def add(repo_path, file) when is_binary(file) do
     go_to_repo(repo_path)
 
-    result = Argos.exec_command("git add #{file}")
+    result = exec_silent!("git add #{file}")
+
     if result.success? do
       {:ok, result.output}
     else
@@ -210,12 +211,13 @@ defmodule Ark.Git do
       when not is_nil(path) and not is_nil(target_branch) do
     go_to_repo(path)
 
-    _current_branch_result = Argos.exec_command("git rev-parse --abbrev-ref HEAD")
+    exec_silent!("git rev-parse --abbrev-ref HEAD")
 
-    _stash_result = Argos.exec_command("git stash push -u -m 'ark auto-stash before checkout'")
+    exec_silent!("git stash push -u -m 'ark auto-stash before checkout'")
 
     # Hacemos checkout a la rama target
-    result = Argos.exec_command("git checkout #{target_branch}")
+    result = exec_silent!("git checkout #{target_branch}")
+
     if result.success? do
       {:ok, repo}
     else
@@ -224,10 +226,11 @@ defmodule Ark.Git do
   end
 
   def clone(%{url: url, path: path} = repo) do
-    result = Argos.exec_command("git clone --quiet #{url} #{path}",
-      [],
-      env: [{"GIT_TERMINAL_PROMPT", "0"}]
-    )
+    result =
+      exec_silent!(
+        "git clone --quiet #{url} #{path}",
+        env: [{"GIT_TERMINAL_PROMPT", "0"}]
+      )
 
     if result.success? do
       {:ok, repo}
@@ -239,7 +242,8 @@ defmodule Ark.Git do
   def commit(%{path: path} = repo, message) do
     go_to_repo(path)
 
-    result = Argos.exec_command("git commit -m \"#{message}\"")
+    result = exec_silent!("git commit -m \"#{message}\"")
+
     if result.success? do
       {:ok, repo}
     else
@@ -248,7 +252,7 @@ defmodule Ark.Git do
   end
 
   def config(attr) do
-    result = Argos.exec_command("git config #{attr}")
+    result = exec_silent!("git config #{attr}")
     if result.success?, do: result.output, else: ""
   end
 
@@ -263,7 +267,8 @@ defmodule Ark.Git do
   def fetch(%{path: path} = repo) do
     go_to_repo(path)
 
-    result = Argos.exec_command("git fetch")
+    result = exec_silent!("git fetch")
+
     if result.success? do
       {:ok, repo}
     else
@@ -272,7 +277,8 @@ defmodule Ark.Git do
   end
 
   def get_git_user_name do
-    result = Argos.exec_command("git config user.name")
+    result = exec_silent!("git config user.name")
+
     if result.success? do
       result.output
       |> String.trim()
@@ -285,7 +291,8 @@ defmodule Ark.Git do
   end
 
   def get_git_user_email do
-    result = Argos.exec_command("git config user.email")
+    result = exec_silent!("git config user.email")
+
     if result.success? do
       String.trim(result.output)
     else
@@ -338,7 +345,8 @@ defmodule Ark.Git do
   def pull(%{path: path, main_branch: branch} = repo) do
     go_to_repo(path)
 
-    result = Argos.exec_command("git pull origin #{branch}")
+    result = exec_silent!("git pull origin #{branch}")
+
     if result.success? do
       {:ok, repo}
     else
@@ -358,7 +366,8 @@ defmodule Ark.Git do
   def fetch_origin(repo_path) do
     go_to_repo(repo_path)
 
-    result = Argos.exec_command("git fetch origin")
+    result = exec_silent!("git fetch origin")
+
     if result.success? do
       {:ok, result.output}
     else
@@ -378,7 +387,8 @@ defmodule Ark.Git do
   def pull_origin(repo_path, branch \\ "main") do
     go_to_repo(repo_path)
 
-    result = Argos.exec_command("git pull origin #{branch}")
+    result = exec_silent!("git pull origin #{branch}")
+
     if result.success? do
       {:ok, result.output}
     else
@@ -396,7 +406,8 @@ defmodule Ark.Git do
       # => {:error, {code, error}}
   """
   def clone_repository(url, target_path) do
-    result = Argos.exec_command("git clone --quiet #{url} #{target_path}")
+    result = exec_silent!("git clone --quiet #{url} #{target_path}")
+
     if result.success? do
       {:ok, result.output}
     else

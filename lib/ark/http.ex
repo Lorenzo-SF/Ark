@@ -1,4 +1,4 @@
-defmodule Ark.HTTP do
+defmodule Ark.Http do
   @moduledoc """
   Cliente HTTP con autenticación automática.
 

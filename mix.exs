@@ -26,7 +26,7 @@ defmodule Ark.MixProject do
 
   def application do
     [
-      extra_applications: [:logger]
+      extra_applications: [:logger, :runtime_tools, :aegis, :argos, :aurora]
     ]
   end
 
@@ -38,6 +38,8 @@ defmodule Ark.MixProject do
       # Level 1B - Argos (command execution & task orchestration)
       # Level 2 - Aegis (CLI/TUI framework)
       {:aegis, path: "../Aegis"},
+      {:argos, path: "../Argos"},
+      {:aurora, path: "../Aurora"},
 
       # External dependencies for tools
       {:docker, "~> 0.4.0"},
@@ -75,41 +77,6 @@ defmodule Ark.MixProject do
         File.cp!("ark", Path.join(dest_dir, "ark"))
         IO.puts("✅ Escript instalado en #{dest_dir}/ark")
       end,
-      credo: ["format --check-formatted", "credo --strict --format=oneline"],
-      quality: [
-        "deps.get",
-        "clean",
-        "compile --warnings-as-errors",
-        "cmd MIX_ENV=test mix test",
-        "credo --strict",
-        "dialyzer",
-        "cmd 'echo \\\"quality terminado\"'"
-      ],
-      ci: [
-        "deps.get",
-        "clean",
-        "compile --warnings-as-errors",
-        "cmd MIX_ENV=test mix test",
-        "credo --strict",
-        "cmd 'echo \\\"terminado terminado\"'"
-      ],
-      hex_prepare: [
-        "clean",
-        "compile --force --warnings-as-errors",
-        "format",
-        "test",
-        "docs",
-        "cmd mix hex.build"
-      ],
-      hex_publish: [
-        "hex_prepare",
-        "cmd mix hex.publish"
-      ]
-    ]
-  end
-
-  defp aliases do
-    [
       credo: ["format --check-formatted", "credo --strict --format=oneline"],
       quality: [
         "deps.get",

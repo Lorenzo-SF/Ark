@@ -1,0 +1,40 @@
+# Dependencies
+/deps
+*_deps
+
+# Build artifacts
+/_build
+*~form
+erl_crash.dump
+.rebar
+.rebar3
+*.o
+*.beam
+*.plt
+*.log
+erl_crash.dump
+
+# IDE
+/.vscode
+/.idea
+.DS_Store
+*.swp
+*.swo
+
+# Tests
+/cover
+/test/tmp
+/test/fixtures
+
+# Documentation
+/doc
+
+# Temp files
+/tmp
+*.tmp
+
+# OS generated files
+Thumbs.db
+
+# Elixir files
+*.ez

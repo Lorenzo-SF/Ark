@@ -68,19 +68,33 @@ defmodule Ark.MixProject do
   defp aliases do
     [
       gen: [
+        "quality",
         "escript.build",
-        "deploy"
+        "deploy",
+        "tools_version"
       ],
       deploy: fn _ ->
         dest_dir = Path.expand("~/.Ypsilon")
         File.mkdir_p!(dest_dir)
-        File.cp!("aurora", Path.join(dest_dir, "aurora"))
-        IO.puts("✅ Escript instalado en dest_dir}/aurora")
+        File.cp!("ark", Path.join(dest_dir, "ark"))
+        IO.puts("✅ Escript instalado en #{dest_dir}/ark")
       end,
-      credo: ["format --check-formatted", "credo --strict --format=oneline"],
+      tools_version:
+      fn _ ->
+          dest_dir = Path.expand("~/.Ypsilon")
+          tool_versions_path = Path.join(dest_dir, ".tool-versions")
+
+          File.write!(tool_versions_path, """
+          erlang 28.1
+          elixir 1.18.4-otp-28
+          """)
+
+          IO.puts("✅ Archivo .tool-versions creado en #{tool_versions_path}")
+      end,
       quality: [
+        "format --check-formatted",
         "deps.get",
-        "credo",
+        "credo --strict --format=oneline",
         "compile --warnings-as-errors",
         "cmd 'echo \"✅ mix compile terminado\"'",
         "cmd MIX_ENV=test mix test",

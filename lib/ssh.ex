@@ -48,30 +48,34 @@ defmodule Ark.Ssh do
     case File.exists?(key_path) do
       false ->
         Logger.info("Generating new SSH key...")
-        result = exec!("ssh-keygen -t rsa -b 4096 -f #{key_path} -N \"\"")
+        result = Argos.Command.exec("ssh-keygen -t rsa -b 4096 -f #{key_path} -N \"\"")
 
         if result.success? do
           Logger.info("SSH key generated successfully")
 
           # Set proper permissions
-          exec!("chmod 600 #{key_path}")
-          exec!("chmod 644 #{key_path}.pub")
+          Argos.Command.exec("chmod 600 #{key_path}")
+          Argos.Command.exec("chmod 644 #{key_path}.pub")
 
           # Display public key
-          case File.read("#{key_path}.pub") do
-            {:ok, pub_key} ->
-              Logger.info("Your public key:")
-              Printer.warning(pub_key)
-
-            {:error, _} ->
-              Logger.warning("Could not read public key")
-          end
+          display_public_key(key_path)
         else
           Logger.error("Failed to generate SSH key: #{result.output}")
         end
 
       true ->
         Logger.info("SSH key already exists")
+    end
+  end
+
+  defp display_public_key(key_path) do
+    case File.read("#{key_path}.pub") do
+      {:ok, pub_key} ->
+        Logger.info("Your public key:")
+        Printer.warning(pub_key)
+
+      {:error, _} ->
+        Logger.warning("Could not read public key")
     end
   end
 
@@ -138,7 +142,7 @@ defmodule Ark.Ssh do
     pub_key_path = Path.join(ssh_dir, "#{key_name}.pub")
 
     if File.exists?(pub_key_path) do
-      result = exec!("pbcopy < #{pub_key_path}")
+      result = Argos.Command.exec("pbcopy < #{pub_key_path}")
 
       if result.success? do
         Printer.success("Public key #{key_name} copied to clipboard")

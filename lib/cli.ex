@@ -43,110 +43,126 @@ defmodule Ark.CLI do
     command = List.first(args)
     subcommand = Enum.at(args, 1)
 
-    case {command, subcommand} do
-      {"system-info", _} ->
-        system_info_command(opts)
-
-      {"git", "setup"} ->
-        git_setup_command()
-
-      {"git", "user-info"} ->
-        git_user_info_command()
-
-      {"git", "clone"} ->
-        git_clone_command(opts)
-
-      {"git", "sync"} ->
-        git_sync_command(opts)
-
-      {"docker", "start"} ->
-        docker_start_command()
-
-      {"docker", "stop"} ->
-        docker_stop_command()
-
-      {"docker", "status"} ->
-        docker_status_command()
-
-      {"ssh", "setup"} ->
-        ssh_setup_command()
-
-      {"ssh", "list-keys"} ->
-        ssh_list_keys_command()
-
-      {"packages", "install"} ->
-        packages_install_command(opts)
-
-      {"weather", _} ->
-        weather_command(opts)
-
-      {"http", "get"} ->
-        http_get_command(opts)
-
-      {"http", "post"} ->
-        http_post_command(opts)
-
-      {"http", "with-auth"} ->
-        http_with_auth_command(opts)
-
-      {"exec", _} ->
-        exec_command(args)
-
-      {"parallel", _} ->
-        parallel_command(args)
-
-      {"success", _} ->
-        success_command(args)
-
-      {"error", _} ->
-        error_command(args)
-
-      {"warning", _} ->
-        warning_command(args)
-
-      {"info", _} ->
-        info_command(args)
-
-      {nil, _} ->
-        show_help()
-
-      _ ->
-        show_help()
-    end
+    process_command({command, subcommand}, opts, args)
   end
+
+  defp process_command({"system-info", _}, opts, _args) do
+    system_info_command(opts)
+  end
+
+  defp process_command({"git", subcommand}, opts, _args) do
+    handle_git_commands(subcommand, opts)
+  end
+
+  defp process_command({"docker", subcommand}, _opts, _args) do
+    handle_docker_commands(subcommand)
+  end
+
+  defp process_command({"ssh", subcommand}, _opts, _args) do
+    handle_ssh_commands(subcommand)
+  end
+
+  defp process_command({"packages", "install"}, opts, _args) do
+    packages_install_command(opts)
+  end
+
+  defp process_command({"weather", _}, opts, _args) do
+    weather_command(opts)
+  end
+
+  defp process_command({"http", subcommand}, opts, _args) do
+    handle_http_commands(subcommand, opts)
+  end
+
+  defp process_command({"exec", _}, _opts, args) do
+    exec_command(args)
+  end
+
+  defp process_command({"parallel", _}, _opts, args) do
+    parallel_command(args)
+  end
+
+  defp process_command({"success", _}, _opts, args) do
+    success_command(args)
+  end
+
+  defp process_command({"error", _}, _opts, args) do
+    error_command(args)
+  end
+
+  defp process_command({"warning", _}, _opts, args) do
+    warning_command(args)
+  end
+
+  defp process_command({"info", _}, _opts, args) do
+    info_command(args)
+  end
+
+  defp process_command({nil, _}, _opts, _args) do
+    show_help()
+  end
+
+  defp process_command(_, _opts, _args) do
+    show_help()
+  end
+
+  defp handle_git_commands("setup", _opts), do: git_setup_command()
+  defp handle_git_commands("user-info", _opts), do: git_user_info_command()
+  defp handle_git_commands("clone", opts), do: git_clone_command(opts)
+  defp handle_git_commands("sync", opts), do: git_sync_command(opts)
+  defp handle_git_commands(_, _opts), do: show_help()
+
+  defp handle_docker_commands("start"), do: docker_start_command()
+  defp handle_docker_commands("stop"), do: docker_stop_command()
+  defp handle_docker_commands("status"), do: docker_status_command()
+  defp handle_docker_commands(_), do: show_help()
+
+  defp handle_ssh_commands("setup"), do: ssh_setup_command()
+  defp handle_ssh_commands("list-keys"), do: ssh_list_keys_command()
+  defp handle_ssh_commands(_), do: show_help()
+
+  defp handle_http_commands("get", opts), do: http_get_command(opts)
+  defp handle_http_commands("post", opts), do: http_post_command(opts)
+  defp handle_http_commands("with-auth", opts), do: http_with_auth_command(opts)
+  defp handle_http_commands(_, _), do: show_help()
 
   # System info command
   defp system_info_command(opts) do
     layout = (opts[:layout] && String.to_atom(opts[:layout])) || :full
 
-    include_weather =
-      case {opts[:weather], opts[:no_weather]} do
-        {nil, true} -> false
-        {true, _} -> true
-        {nil, nil} -> true
-        _ -> opts[:weather]
-      end
-
-    include_network =
-      case {opts[:network], opts[:no_network]} do
-        {nil, true} -> false
-        {true, _} -> true
-        {nil, nil} -> true
-        _ -> opts[:network]
-      end
+    include_weather = determine_weather_flag(opts)
+    include_network = determine_network_flag(opts)
 
     Ark.system_info(layout: layout, weather: include_weather, network: include_network)
   end
 
+  defp determine_weather_flag(opts) do
+    case {opts[:weather], opts[:no_weather]} do
+      {nil, true} -> false
+      {true, _} -> true
+      {nil, nil} -> true
+      _ -> opts[:weather]
+    end
+  end
+
+  defp determine_network_flag(opts) do
+    case {opts[:network], opts[:no_network]} do
+      {nil, true} -> false
+      {true, _} -> true
+      {nil, nil} -> true
+      _ -> opts[:network]
+    end
+  end
+
   # Git setup command
-  defp git_setup_command() do
+  defp git_setup_command do
     Ark.setup_git()
   end
 
   # Git user info command
-  defp git_user_info_command() do
+  defp git_user_info_command do
     user_info = Ark.git_user_info()
-    IO.inspect(user_info)
+    IO.puts("#{inspect(user_info)}")
   end
 
   # Git clone command
@@ -192,30 +208,30 @@ defmodule Ark.CLI do
   end
 
   # Docker start command
-  defp docker_start_command() do
+  defp docker_start_command do
     result = Ark.docker_start()
     IO.puts(inspect(result))
   end
 
   # Docker stop command
-  defp docker_stop_command() do
+  defp docker_stop_command do
     result = Ark.docker_stop()
     IO.puts(inspect(result))
   end
 
   # Docker status command
-  defp docker_status_command() do
+  defp docker_status_command do
     result = Ark.docker_status()
-    IO.inspect(result)
+    IO.puts("#{inspect(result)}")
   end
 
   # SSH setup command
-  defp ssh_setup_command() do
+  defp ssh_setup_command do
     Ark.setup_ssh()
   end
 
   # SSH list keys command
-  defp ssh_list_keys_command() do
+  defp ssh_list_keys_command do
     keys = Ark.list_ssh_keys()
     Enum.each(keys, &IO.puts/1)
   end
@@ -238,7 +254,7 @@ defmodule Ark.CLI do
   defp weather_command(opts) do
     url = opts[:url]
     result = Ark.weather_today(url)
-    IO.inspect(result)
+    IO.puts("#{inspect(result)}")
   end
 
   # HTTP GET command
@@ -348,7 +364,7 @@ defmodule Ark.CLI do
 
         if length(tasks) > 0 do
           result = Ark.run_parallel(tasks)
-          IO.inspect(result)
+          IO.puts("#{inspect(result)}")
         else
           IO.puts("Error: No tasks specified for parallel execution")
           show_help()
@@ -408,7 +424,7 @@ defmodule Ark.CLI do
     end
   end
 
-  defp show_help() do
+  defp show_help do
     help_text = """
     Ark CLI - Global development tools framework
 

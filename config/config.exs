@@ -31,7 +31,12 @@ config :ark, :ai,
 # -- Deps
 # -------------------------------------------
 
-config :logger, backends: [Argos.Log]
+config :logger,
+  backends: [Argos.Logger]
+
+config :argos,
+  logger: Argos.Logger.Default,
+  env: :dev
 
 config :aegis, :animations,
   frames: [
@@ -137,7 +142,7 @@ config :aegis, :terminal,
   shell_timeout: 5000,
   shell: "/bin/zsh"
 
-  config :aurora, :colors,
+config :aurora, :colors,
   colors: %{
     no_color: %{
       name: :no_color,

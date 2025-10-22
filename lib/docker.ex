@@ -23,7 +23,7 @@ defmodule Ark.Docker do
 
   require Logger
 
-  import Argos.Command
+  alias Argos.Command
 
   alias Aurora.Color
   alias Aurora.Structs.ChunkText
@@ -129,17 +129,18 @@ defmodule Ark.Docker do
   def stop_containers(container_ids) when is_list(container_ids) do
     case ensure_running() do
       :ok ->
-        Enum.each(container_ids, fn id ->
-          case Containers.stop(id) do
-            {:ok, _} -> Logger.info("Stopped container: #{id}")
-            error -> Logger.error("Failed to stop container #{id}: #{inspect(error)}")
-          end
-        end)
-
+        Enum.each(container_ids, &stop_container/1)
         :ok
 
       error ->
         error
+    end
+  end
+
+  defp stop_container(id) do
+    case Containers.stop(id) do
+      {:ok, _} -> Logger.info("Stopped container: #{id}")
+      error -> Logger.error("Failed to stop container #{id}: #{inspect(error)}")
     end
   end
 
@@ -149,17 +150,18 @@ defmodule Ark.Docker do
   def start_containers(container_ids) when is_list(container_ids) do
     case ensure_running() do
       :ok ->
-        Enum.each(container_ids, fn id ->
-          case Containers.start(id) do
-            {:ok, _} -> Logger.info("Started container: #{id}")
-            error -> Logger.error("Failed to start container #{id}: #{inspect(error)}")
-          end
-        end)
-
+        Enum.each(container_ids, &start_container/1)
         :ok
 
       error ->
         error
+    end
+  end
+
+  defp start_container(id) do
+    case Containers.start(id) do
+      {:ok, _} -> Logger.info("Started container: #{id}")
+      error -> Logger.error("Failed to start container #{id}: #{inspect(error)}")
     end
   end
 
@@ -169,25 +171,26 @@ defmodule Ark.Docker do
   def remove_containers(container_ids) when is_list(container_ids) do
     case ensure_running() do
       :ok ->
-        Enum.each(container_ids, fn id ->
-          case Containers.stop(id) do
-            {:ok, _} ->
-              Logger.info("Stopped container before removal: #{id}")
-
-            _ ->
-              Logger.info("Container wasn't running: #{id}")
-          end
-
-          case Containers.remove(id) do
-            {:ok, _} -> Logger.info("Removed container: #{id}")
-            error -> Logger.error("Failed to remove container #{id}: #{inspect(error)}")
-          end
-        end)
-
+        Enum.each(container_ids, &remove_container/1)
         :ok
 
       error ->
         error
+    end
+  end
+
+  defp remove_container(id) do
+    case Containers.stop(id) do
+      {:ok, _} ->
+        Logger.info("Stopped container before removal: #{id}")
+
+      _ ->
+        Logger.info("Container wasn't running: #{id}")
+    end
+
+    case Containers.remove(id) do
+      {:ok, _} -> Logger.info("Removed container: #{id}")
+      error -> Logger.error("Failed to remove container #{id}: #{inspect(error)}")
     end
   end
 
@@ -368,7 +371,7 @@ defmodule Ark.Docker do
   def list_containers do
     case ensure_running() do
       :ok ->
-        exec!("docker ps --format \"table {{.ID}}\\t{{.Names}}\\t{{.Status}}\\t{{.Ports}}\"")
+        Argos.Command.exec("docker ps --format \"table {{.ID}}\\t{{.Names}}\\t{{.Status}}\\t{{.Ports}}\"")
 
       _ ->
         %CommandResult{
@@ -389,7 +392,7 @@ defmodule Ark.Docker do
   def list_all_containers do
     case ensure_running() do
       :ok ->
-        exec!("docker ps -a --format \"table {{.ID}}\\t{{.Names}}\\t{{.Status}}\\t{{.Ports}}\"")
+        Argos.Command.exec("docker ps -a --format \"table {{.ID}}\\t{{.Names}}\\t{{.Status}}\\t{{.Ports}}\"")
 
       _ ->
         %CommandResult{
@@ -428,15 +431,7 @@ defmodule Ark.Docker do
             options =
               services
               |> Enum.with_index(1)
-              |> Enum.map(fn {service, idx} ->
-                %Aegis.Structs.MenuOption{
-                  id: idx,
-                  name: service.name,
-                  description: service.image || "No image specified",
-                  action_type: :execution,
-                  action: fn -> nil end
-                }
-              end)
+              |> Enum.map(&create_menu_option/1)
 
             menu_info = %Aegis.Structs.MenuInfo{
               options: options,
@@ -450,6 +445,16 @@ defmodule Ark.Docker do
     end
   end
 
+  defp create_menu_option({service, idx}) do
+    %Aegis.Structs.MenuOption{
+      id: idx,
+      name: service.name,
+      description: service.image || "No image specified",
+      action_type: :execution,
+      action: fn -> nil end
+    }
+  end
+
   defp parse_docker_compose_services(compose_path) do
     case System.find_executable("docker-compose") || System.find_executable("docker") do
       nil ->
@@ -459,7 +464,7 @@ defmodule Ark.Docker do
         compose_dir = Path.dirname(compose_path)
 
         compose_result =
-          exec!(
+          Argos.Command.exec(
             "cd #{compose_dir} && docker compose config --services 2>/dev/null || docker-compose config --services"
           )
 
@@ -468,56 +473,54 @@ defmodule Ark.Docker do
           |> String.split("\n", trim: true)
           |> Enum.map(&String.trim/1)
           |> Enum.reject(&(&1 == ""))
-          |> Enum.map(fn service_name ->
-            %{
-              name: service_name,
-              image: get_image_for_service(compose_path, service_name),
-              build: nil
-            }
-          end)
+          |> Enum.map(&create_service_map(&1, compose_path))
         else
           manual_parse_docker_compose(compose_path)
         end
     end
   end
 
+  defp create_service_map(service_name, compose_path) do
+    %{
+      name: service_name,
+      image: get_image_for_service(compose_path, service_name),
+      build: nil
+    }
+  end
+
   defp manual_parse_docker_compose(compose_path) do
-    try do
-      content = File.read!(compose_path)
+    content = File.read!(compose_path)
 
-      service_regex = ~r/^[[:space:]]*([a-zA-Z0-9_-]+):[[:space:]]*$/m
+    service_regex = ~r/^[[:space:]]*([a-zA-Z0-9_-]+):[[:space:]]*$/m
 
-      services =
-        Regex.scan(service_regex, content, capture: :all_but_first)
-        |> List.flatten()
-        |> Enum.uniq()
+    services =
+      Regex.scan(service_regex, content, capture: :all_but_first)
+      |> List.flatten()
+      |> Enum.uniq()
 
-      Enum.map(services, fn service_name ->
-        %{
-          name: service_name,
-          image: get_image_for_service(compose_path, service_name),
-          build: nil
-        }
-      end)
-    rescue
-      _ -> []
-    end
+    Enum.map(services, fn service_name ->
+      %{
+        name: service_name,
+        image: get_image_for_service(compose_path, service_name),
+        build: nil
+      }
+    end)
+  rescue
+    _ -> []
   end
 
   defp get_image_for_service(compose_path, service_name) do
-    try do
-      content = File.read!(compose_path)
+    content = File.read!(compose_path)
 
-      service_pattern =
-        ~r/^[[:space:]]*#{Regex.escape(service_name)}:[[:space:]]*\n(?:^[[:space:]]+.*\n?)*?[[:space:]]+image:[[:space:]]+([^\n#]+)/m
+    service_pattern =
+      ~r/^[[:space:]]*#{Regex.escape(service_name)}:[[:space:]]*\n(?:^[[:space:]]+.*\n?)*?[[:space:]]+image:[[:space:]]+([^\n#]+)/m
 
-      case Regex.run(service_pattern, content, capture: :all_but_first) do
-        [image] -> String.trim(image)
-        _ -> nil
-      end
-    rescue
+    case Regex.run(service_pattern, content, capture: :all_but_first) do
+      [image] -> String.trim(image)
       _ -> nil
     end
+  rescue
+    _ -> nil
   end
 
   def show_container_info do
@@ -559,7 +562,7 @@ defmodule Ark.Docker do
       Docker.Containers.list()
       |> Enum.with_index(1)
       |> Enum.map(fn {%{"Names" => names}, idx} ->
-        %MenuOption{
+        %Aegis.Structs.MenuOption{
           id: idx,
           name: Enum.join(names, ", "),
           description: Enum.join(names, ", "),
@@ -568,7 +571,7 @@ defmodule Ark.Docker do
         }
       end)
 
-    menu_info = %MenuInfo{
+    menu_info = %Aegis.Structs.MenuInfo{
       options: options,
       breadcrumbs: ["Docker", option],
       ascii_art: Tui.generate_menu_logo()
@@ -649,7 +652,7 @@ defmodule Ark.Docker do
   """
   def run_command(command, args \\ []) do
     full_command = "docker #{command} #{Enum.join(args, " ")}"
-    exec!(full_command)
+    Argos.Command.exec(full_command)
   end
 
   @doc """
@@ -688,7 +691,7 @@ defmodule Ark.Docker do
 
       %{installed: true, running: false} ->
         Logger.info("Starting Docker...")
-        result = exec!("open -a Docker")
+        result = Argos.Command.exec("open -a Docker")
         if result.success?, do: :starting, else: {:error, :start_failed}
 
       %{installed: false} ->

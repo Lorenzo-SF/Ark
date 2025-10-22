@@ -21,12 +21,12 @@ defmodule Ark.Tools do
 
   require Logger
 
-  import Argos.{AsyncTask, Command}
-
+  alias Aegis.Animation
+  import Argos.AsyncTask
+  alias Argos.Command
+  alias Ark.Pathy
   alias Aurora.Color
   alias Aurora.Structs.ChunkText
-  alias Ark.Pathy
-  alias Aegis.Animation
 
   # Delegaciones a otros módulos
   defdelegate motd_raw(opts \\ []), to: Ark.Motd, as: :show
@@ -142,12 +142,7 @@ defmodule Ark.Tools do
         tool_versions_path
         |> File.read!()
         |> String.split("\n", trim: true)
-        |> Enum.reduce(%{}, fn line, acc ->
-          case String.split(line, " ", trim: true) do
-            [tool, version] -> Map.put(acc, tool, version)
-            _ -> acc
-          end
-        end)
+        |> Enum.reduce(%{}, &parse_tool_version/2)
 
       log.("asdf_command => Versiones detectadas: #{inspect(versions)}")
 
@@ -158,15 +153,12 @@ defmodule Ark.Tools do
       # asdf exec usará las versiones definidas en .tool-versions del directorio actual
       asdf_command = "cd #{project_path} && asdf exec #{command}"
 
-      log.(
-        "asdf_command => Comando generado: #{asdf_command} (usando elixir #{elixir_version}, erlang #{erlang_version})"
-      )
+      log.("asdf_command => Comando generado: #{asdf_command} (usando elixir #{elixir_version}, erlang #{erlang_version})")
 
       result =
-        exec!(asdf_command,
+        Argos.Command.exec(asdf_command,
           env: [
-            {"PATH",
-             "#{System.get_env("HOME")}/.asdf/shims:#{System.get_env("HOME")}/.asdf/bin:#{System.get_env("PATH")}"}
+            {"PATH", "#{System.get_env("HOME")}/.asdf/shims:#{System.get_env("HOME")}/.asdf/bin:#{System.get_env("PATH")}"}
           ]
         )
 
@@ -182,10 +174,9 @@ defmodule Ark.Tools do
       fallback_command = "cd #{project_path} && #{command}"
 
       result =
-        exec!(fallback_command,
+        Argos.Command.exec(fallback_command,
           env: [
-            {"PATH",
-             "#{System.get_env("HOME")}/.asdf/shims:#{System.get_env("HOME")}/.asdf/bin:#{System.get_env("PATH")}"}
+            {"PATH", "#{System.get_env("HOME")}/.asdf/shims:#{System.get_env("HOME")}/.asdf/bin:#{System.get_env("PATH")}"}
           ]
         )
 
@@ -235,7 +226,7 @@ defmodule Ark.Tools do
   def exec_command(command) do
     Logger.info("Executing command: #{command}")
     # Usamos el macro exec! de Argos.Command
-    result = exec!(command)
+    result = Argos.Command.exec(command)
 
     %{
       success?: result.success?,
@@ -262,5 +253,12 @@ defmodule Ark.Tools do
     Logger.info("Getting system information with options: #{inspect(opts)}")
     # Usamos la función motd_raw que ya está definida
     motd_raw(opts)
+  end
+
+  defp parse_tool_version(line, acc) do
+    case String.split(line, " ", trim: true) do
+      [tool, version] -> Map.put(acc, tool, version)
+      _ -> acc
+    end
   end
 end

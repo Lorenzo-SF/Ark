@@ -19,7 +19,7 @@ defmodule Ark.Motd do
   - Argos (1B): Sistema de ejecución y orquestación
   - Printer (2): Framework CLI/TUI completo
   """
-  import Argos.Command
+  alias Argos.Command
 
   alias Aegis.{Printer, Terminal}
   alias Aurora.Color
@@ -168,12 +168,12 @@ defmodule Ark.Motd do
   end
 
   defp get_macos_version do
-    result = exec!("sw_vers -productVersion")
+    result = Argos.Command.exec("sw_vers -productVersion")
     if result.success?, do: String.trim(result.output), else: "Unknown"
   end
 
   defp get_linux_version do
-    result = exec!("lsb_release -d")
+    result = Argos.Command.exec("lsb_release -d")
 
     if result.success? do
       result.output
@@ -185,7 +185,7 @@ defmodule Ark.Motd do
   end
 
   defp get_uptime do
-    result = exec!("uptime")
+    result = Argos.Command.exec("uptime")
 
     if result.success? do
       result.output
@@ -199,7 +199,7 @@ defmodule Ark.Motd do
   end
 
   defp get_load_average do
-    result = exec!("uptime")
+    result = Argos.Command.exec("uptime")
 
     if result.success? do
       result.output
@@ -220,7 +220,7 @@ defmodule Ark.Motd do
   end
 
   defp get_memory_usage_macos do
-    result = exec!("memory_pressure")
+    result = Argos.Command.exec("memory_pressure")
 
     if result.success? and String.contains?(result.output, "normal") do
       "Normal"
@@ -230,7 +230,7 @@ defmodule Ark.Motd do
   end
 
   defp get_memory_usage_linux do
-    result = exec!("free -h")
+    result = Argos.Command.exec("free -h")
 
     if result.success? do
       result.output
@@ -244,7 +244,7 @@ defmodule Ark.Motd do
   end
 
   defp get_disk_usage do
-    result = exec!("df -h /")
+    result = Argos.Command.exec("df -h /")
 
     if result.success? do
       result.output
@@ -261,10 +261,10 @@ defmodule Ark.Motd do
     result =
       case :os.type() do
         {:unix, :darwin} ->
-          exec!("ifconfig | grep 'inet ' | grep -v 127.0.0.1 | head -1 | awk '{print $2}'")
+          Argos.Command.exec("ifconfig | grep 'inet ' | grep -v 127.0.0.1 | head -1 | awk '{print $2}'")
 
         {:unix, :linux} ->
-          exec!("hostname -I | awk '{print $1}'")
+          Argos.Command.exec("hostname -I | awk '{print $1}'")
 
         _ ->
           %{success?: false}
@@ -274,32 +274,30 @@ defmodule Ark.Motd do
   end
 
   defp get_external_ip do
-    result = exec!("curl -s ifconfig.me")
+    result = Argos.Command.exec("curl -s ifconfig.me")
     if result.success?, do: String.trim(result.output), else: "Unknown"
   end
 
   defp get_connectivity_status do
-    result = exec!("ping -c 1 8.8.8.8")
+    result = Argos.Command.exec("ping -c 1 8.8.8.8")
     if result.success?, do: "✅ Online", else: "❌ Offline"
   end
 
   defp get_current_time do
-    try do
+    DateTime.now!("Etc/UTC")
+    |> DateTime.shift_zone!(get_timezone())
+    |> DateTime.to_string()
+  rescue
+    _error ->
+      # Fallback to UTC if timezone shifting fails
       DateTime.now!("Etc/UTC")
-      |> DateTime.shift_zone!(get_timezone())
       |> DateTime.to_string()
-    rescue
-      _error ->
-        # Fallback to UTC if timezone shifting fails
-        DateTime.now!("Etc/UTC")
-        |> DateTime.to_string()
-    end
   end
 
   defp get_timezone do
     case :os.type() do
       {:unix, _} ->
-        result = exec!("date +%Z")
+        result = Argos.Command.exec("date +%Z")
         if result.success?, do: String.trim(result.output), else: "UTC"
 
       _ ->

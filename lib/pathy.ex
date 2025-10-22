@@ -81,8 +81,7 @@ defmodule Ark.Pathy do
   def generate_tree(paths) when is_list(paths) do
     paths
     |> Enum.sort()
-    |> Enum.map(&format_tree_path/1)
-    |> Enum.join("\n")
+    |> Enum.map_join("\n", &format_tree_path/1)
   end
 
   def generate_tree(_), do: ""
@@ -333,14 +332,18 @@ defmodule Ark.Pathy do
         if String.contains?(content, new_line) do
           {:skipped, "Line already exists"}
         else
-          case File.write(file, "\n" <> new_line, [:append]) do
-            :ok -> {:ok, :appended}
-            {:error, reason} -> {:error, reason}
-          end
+          write_line_to_file(new_line, file)
         end
 
       {:error, reason} ->
         {:error, reason}
+    end
+  end
+
+  defp write_line_to_file(new_line, file) do
+    case File.write(file, "\n" <> new_line, [:append]) do
+      :ok -> {:ok, :appended}
+      {:error, reason} -> {:error, reason}
     end
   end
 end

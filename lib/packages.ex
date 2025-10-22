@@ -19,7 +19,7 @@ defmodule Ark.Packages do
   - Argos (1B): Sistema de ejecución y orquestación
   - Aegis (2): Framework CLI/TUI completo
   """
-  import Argos.Command
+  alias Argos.Command
 
   alias Aegis.{Animation, Printer}
   alias Aurora.Color
@@ -51,7 +51,7 @@ defmodule Ark.Packages do
 
       true ->
         Printer.error("No compatible package manager found (brew or apt required)")
-        halt(1)
+        Argos.Command.halt(1)
     end
   end
 
@@ -67,16 +67,16 @@ defmodule Ark.Packages do
 
     case pkg_manager do
       :brew ->
-        exec!("brew update")
-        exec!("brew upgrade")
+        Argos.Command.exec("brew update")
+        Argos.Command.exec("brew upgrade")
 
       :apt ->
-        result1 = exec_sudo!("apt update")
-        result2 = exec_sudo!("apt upgrade -y")
+        result1 = Argos.Command.exec_sudo("apt update")
+        result2 = Argos.Command.exec_sudo("apt upgrade -y")
 
         if not result1.success? or not result2.success? do
           Printer.error("Error actualizando el sistema")
-          halt(1)
+          Argos.Command.halt(1)
         end
     end
 
@@ -109,10 +109,10 @@ defmodule Ark.Packages do
       result =
         case pkg_manager do
           :brew ->
-            exec!("brew install #{package}")
+            Argos.Command.exec("brew install #{package}")
 
           :apt ->
-            exec_sudo!("apt install -y #{String.replace(package, "--cask", "")}")
+            Argos.Command.exec_sudo("apt install -y #{String.replace(package, "--cask", "")}")
         end
 
       Animation.stop()
@@ -126,14 +126,14 @@ defmodule Ark.Packages do
   end
 
   def package_installed?(package, :apt) do
-    {output, exit_code} = exec!("dpkg -s #{package}", stderr_to_stdout: true)
+    {output, exit_code} = Argos.Command.exec("dpkg -s #{package}", stderr_to_stdout: true)
     exit_code == 0 and String.contains?(output, "Status: install ok installed")
   rescue
     _ -> false
   end
 
   def package_installed?(package, :brew) do
-    result = exec!("brew list #{package}")
+    result = Argos.Command.exec("brew list #{package}")
     result.success?
   end
 

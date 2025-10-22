@@ -68,7 +68,7 @@ defmodule Ark.MixProject do
   defp aliases do
     [
       gen: [
-        "quality",
+        "format",
         "escript.build",
         "deploy",
         "tools_version"
@@ -79,20 +79,19 @@ defmodule Ark.MixProject do
         File.cp!("ark", Path.join(dest_dir, "ark"))
         IO.puts("✅ Escript instalado en #{dest_dir}/ark")
       end,
-      tools_version:
-      fn _ ->
-          dest_dir = Path.expand("~/.Ypsilon")
-          tool_versions_path = Path.join(dest_dir, ".tool-versions")
+      tools_version: fn _ ->
+        dest_dir = Path.expand("~/.Ypsilon")
+        tool_versions_path = Path.join(dest_dir, ".tool-versions")
 
-          File.write!(tool_versions_path, """
-          erlang 28.1
-          elixir 1.18.4-otp-28
-          """)
+        File.write!(tool_versions_path, """
+        erlang 28.1
+        elixir 1.18.4-otp-28
+        """)
 
-          IO.puts("✅ Archivo .tool-versions creado en #{tool_versions_path}")
+        IO.puts("✅ Archivo .tool-versions creado en #{tool_versions_path}")
       end,
       quality: [
-        "format --check-formatted",
+        "format",
         "deps.get",
         "credo --strict --format=oneline",
         "compile --warnings-as-errors",

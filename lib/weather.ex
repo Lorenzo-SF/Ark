@@ -18,9 +18,9 @@ defmodule Ark.Weather do
 
   import SweetXml
 
+  alias Ark.Http
   alias Aurora.Color
   alias Aurora.Structs.ChunkText
-  alias Ark.Http
 
   @doc """
   Obtiene la información meteorológica del día actual.

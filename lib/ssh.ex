@@ -22,8 +22,6 @@ defmodule Ark.Ssh do
 
   require Logger
 
-  import Argos.Command
-
   @doc """
   Sets up SSH configuration and keys.
   """
@@ -72,7 +70,7 @@ defmodule Ark.Ssh do
     case File.read("#{key_path}.pub") do
       {:ok, pub_key} ->
         Logger.info("Your public key:")
-        Printer.warning(pub_key)
+        Aegis.Printer.warning(pub_key)
 
       {:error, _} ->
         Logger.warning("Could not read public key")
@@ -124,12 +122,12 @@ defmodule Ark.Ssh do
 
     case File.read(pub_key_path) do
       {:ok, content} ->
-        Printer.info("Public key for #{key_name}:")
-        Printer.success(String.trim(content))
+        Aegis.Printer.info("Public key for #{key_name}:")
+        Aegis.Printer.success(String.trim(content))
         {:ok, content}
 
       {:error, reason} ->
-        Printer.error("Could not read public key #{key_name}: #{reason}")
+        Aegis.Printer.error("Could not read public key #{key_name}: #{reason}")
         {:error, reason}
     end
   end
@@ -145,14 +143,14 @@ defmodule Ark.Ssh do
       result = Argos.Command.exec("pbcopy < #{pub_key_path}")
 
       if result.success? do
-        Printer.success("Public key #{key_name} copied to clipboard")
+        Aegis.Printer.success("Public key #{key_name} copied to clipboard")
         :ok
       else
-        Printer.error("Failed to copy public key to clipboard")
+        Aegis.Printer.error("Failed to copy public key to clipboard")
         {:error, :copy_failed}
       end
     else
-      Printer.error("Public key #{key_name} not found")
+      Aegis.Printer.error("Public key #{key_name} not found")
       {:error, :not_found}
     end
   end

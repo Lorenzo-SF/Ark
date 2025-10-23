@@ -19,8 +19,6 @@ defmodule Ark.Motd do
   - Argos (1B): Sistema de ejecución y orquestación
   - Printer (2): Framework CLI/TUI completo
   """
-  alias Argos.Command
-
   alias Aegis.{Printer, Terminal}
   alias Aurora.Color
   alias Aurora.Structs.ChunkText

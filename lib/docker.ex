@@ -23,14 +23,10 @@ defmodule Ark.Docker do
 
   require Logger
 
-  alias Argos.Command
-
-  alias Aurora.Color
   alias Aurora.Structs.ChunkText
   alias Docker.{Containers, Images}
   alias Aegis.{Printer, Terminal, Tui}
-  alias Aegis.Structs.{MenuInfo, MenuOption}
-  alias Argos.AsyncTask
+  alias Aegis.Printer.Logos
   alias Argos.Structs.CommandResult
 
   defp get_containers, do: Application.get_env(:ark, :docker)[:containers] || []
@@ -48,12 +44,8 @@ defmodule Ark.Docker do
       :ok ->
         task_name = String.to_atom("check_#{container}_running")
 
-        AsyncTask.start(
-          task_name,
-          fn ->
-            check_container_loop(container, task_name)
-          end
-        )
+        # Fallback: run the check loop directly in a new process instead of using AsyncTask
+        spawn(fn -> check_container_loop(container, task_name) end)
 
         task_name
 
@@ -70,7 +62,7 @@ defmodule Ark.Docker do
 
     case running?(found_container, container) do
       {^container, :started} ->
-        AsyncTask.stop(task_name)
+        :ok
         {container, :started}
 
       _ ->
@@ -171,7 +163,7 @@ defmodule Ark.Docker do
   def remove_containers(container_ids) when is_list(container_ids) do
     case ensure_running() do
       :ok ->
-        Enum.each(container_ids, &remove_container/1)
+        Enum.each(container_ids, &stop_and_remove_container/1)
         :ok
 
       error ->
@@ -179,7 +171,7 @@ defmodule Ark.Docker do
     end
   end
 
-  defp remove_container(id) do
+  defp stop_and_remove_container(id) do
     case Containers.stop(id) do
       {:ok, _} ->
         Logger.info("Stopped container before removal: #{id}")
@@ -311,7 +303,7 @@ defmodule Ark.Docker do
         menu_info = %Aegis.Structs.MenuInfo{
           options: options,
           breadcrumbs: ["Docker", title],
-          ascii_art: Tui.generate_menu_logo(),
+          ascii_art: Logos.start_logo() || "",
           multiselect: true
         }
 
@@ -436,7 +428,7 @@ defmodule Ark.Docker do
             menu_info = %Aegis.Structs.MenuInfo{
               options: options,
               breadcrumbs: ["Docker", "Pull Containers", Path.basename(compose_path)],
-              ascii_art: Tui.generate_menu_logo(),
+              ascii_art: Logos.start_logo() || "",
               multiselect: true
             }
 
@@ -554,7 +546,7 @@ defmodule Ark.Docker do
 
     Printer.message(
       chunks: [
-        %ChunkText{text: message, color: Color.resolve_color(:primary)}
+        %ChunkText{text: message, color: Aurora.Color.get_color_info(:primary)}
       ]
     )
 
@@ -574,7 +566,7 @@ defmodule Ark.Docker do
     menu_info = %Aegis.Structs.MenuInfo{
       options: options,
       breadcrumbs: ["Docker", option],
-      ascii_art: Tui.generate_menu_logo()
+      ascii_art: Logos.start_logo() || ""
     }
 
     Tui.run(menu_info)

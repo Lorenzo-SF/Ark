@@ -21,7 +21,6 @@ defmodule Ark.Git do
   - Aegis (2): Framework CLI/TUI completo
   """
   alias Aegis.Printer
-  alias Argos.Command
   alias Ark.Pathy
   alias Aurora.Color
   alias Aurora.Structs.ChunkText
@@ -93,17 +92,21 @@ defmodule Ark.Git do
     # Verificar que es un repositorio git válido
     case Argos.Command.exec_silent("git rev-parse --git-dir") do
       %{success?: true} ->
-        # Hacer fetch de forma segura sin refspec específico
-        case Argos.Command.exec_silent("git fetch --all") do
-          %{success?: true, output: output} ->
-            {:ok, output}
-
-          %{success?: false, output: _error} ->
-            {:error, :fetch_failed}
-        end
+        fetch_all_changes()
 
       %{success?: false} ->
         {:error, :not_a_git_repository}
+    end
+  end
+
+  defp fetch_all_changes do
+    # Hacer fetch de forma segura sin refspec específico
+    case Argos.Command.exec_silent("git fetch --all") do
+      %{success?: true, output: output} ->
+        {:ok, output}
+
+      %{success?: false, output: _error} ->
+        {:error, :fetch_failed}
     end
   end
 
@@ -139,10 +142,10 @@ defmodule Ark.Git do
   def ensure_clone(nil), do: {:error, :no_repo_defined}
 
   def ensure_clone(repos, workspace_path) when is_list(repos) do
-    results =
-      Enum.map(repos, fn %{repo: repo} ->
-        ensure_clone(repo, workspace_path)
-      end)
+    # Process each repository
+    Enum.each(repos, fn %{repo: repo} ->
+      ensure_clone(repo, workspace_path)
+    end)
 
     repos
     |> Enum.map(& &1.repo)

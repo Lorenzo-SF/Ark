@@ -19,8 +19,6 @@ defmodule Ark.Packages do
   - Argos (1B): Sistema de ejecución y orquestación
   - Aegis (2): Framework CLI/TUI completo
   """
-  alias Argos.Command
-
   alias Aegis.{Animation, Printer}
   alias Aurora.Color
   alias Aurora.Structs.ChunkText
@@ -80,7 +78,7 @@ defmodule Ark.Packages do
         end
     end
 
-    Animation.stop()
+    Animation.stop(:default)
     Printer.success("Sistema actualizado con éxito")
   end
 
@@ -103,7 +101,7 @@ defmodule Ark.Packages do
     installed? = package_installed?(package, pkg_manager)
 
     if installed? do
-      Animation.stop()
+      Animation.stop(:default)
       Printer.info("#{package} ya está instalado")
     else
       result =
@@ -115,7 +113,7 @@ defmodule Ark.Packages do
             Argos.Command.exec_sudo("apt install -y #{String.replace(package, "--cask", "")}")
         end
 
-      Animation.stop()
+      Animation.stop(:default)
 
       if result.success? do
         Printer.success("#{package} instalado con éxito")
@@ -126,8 +124,8 @@ defmodule Ark.Packages do
   end
 
   def package_installed?(package, :apt) do
-    {output, exit_code} = Argos.Command.exec("dpkg -s #{package}", stderr_to_stdout: true)
-    exit_code == 0 and String.contains?(output, "Status: install ok installed")
+    result = Argos.Command.exec("dpkg -s #{package}", stderr_to_stdout: true)
+    result.exit_code == 0 and String.contains?(result.output, "Status: install ok installed")
   rescue
     _ -> false
   end

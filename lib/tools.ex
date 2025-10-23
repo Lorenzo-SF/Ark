@@ -22,8 +22,6 @@ defmodule Ark.Tools do
   require Logger
 
   alias Aegis.Animation
-  import Argos.AsyncTask
-  alias Argos.Command
   alias Ark.Pathy
   alias Aurora.Color
   alias Aurora.Structs.ChunkText
@@ -41,7 +39,7 @@ defmodule Ark.Tools do
   end
 
   def countdown(_, 0) do
-    Animation.stop()
+    Animation.stop(:default)
     :finished
   end
 
@@ -241,8 +239,17 @@ defmodule Ark.Tools do
   @spec run_parallel([{String.t(), String.t()}]) :: map()
   def run_parallel(tasks) do
     Logger.info("Running parallel tasks: #{inspect(tasks)}")
-    # Delegamos a Argos que tendrá la implementación real
-    AsyncTask.run_parallel(tasks)
+    # Execute tasks sequentially since the parallel version may not exist
+    results =
+      tasks
+      |> Enum.map(fn {name, task} ->
+        Logger.info("Running task: #{name}")
+        result = Argos.Command.exec(task)
+        {name, result}
+      end)
+      |> Enum.into(%{})
+
+    results
   end
 
   @doc """

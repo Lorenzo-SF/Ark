@@ -151,12 +151,15 @@ defmodule Ark.Tools do
       # asdf exec usará las versiones definidas en .tool-versions del directorio actual
       asdf_command = "cd #{project_path} && asdf exec #{command}"
 
-      log.("asdf_command => Comando generado: #{asdf_command} (usando elixir #{elixir_version}, erlang #{erlang_version})")
+      log.(
+        "asdf_command => Comando generado: #{asdf_command} (usando elixir #{elixir_version}, erlang #{erlang_version})"
+      )
 
       result =
         Argos.Command.exec(asdf_command,
           env: [
-            {"PATH", "#{System.get_env("HOME")}/.asdf/shims:#{System.get_env("HOME")}/.asdf/bin:#{System.get_env("PATH")}"}
+            {"PATH",
+             "#{System.get_env("HOME")}/.asdf/shims:#{System.get_env("HOME")}/.asdf/bin:#{System.get_env("PATH")}"}
           ]
         )
 
@@ -174,7 +177,8 @@ defmodule Ark.Tools do
       result =
         Argos.Command.exec(fallback_command,
           env: [
-            {"PATH", "#{System.get_env("HOME")}/.asdf/shims:#{System.get_env("HOME")}/.asdf/bin:#{System.get_env("PATH")}"}
+            {"PATH",
+             "#{System.get_env("HOME")}/.asdf/shims:#{System.get_env("HOME")}/.asdf/bin:#{System.get_env("PATH")}"}
           ]
         )
 
@@ -220,10 +224,14 @@ defmodule Ark.Tools do
   @doc """
   Ejecuta un comando del sistema usando Argos.
   """
-  @spec exec_command(String.t()) :: %{success?: boolean(), output: String.t(), exit_code: integer()}
+  @spec exec_command(String.t()) :: %{
+          success?: boolean(),
+          output: String.t(),
+          exit_code: integer()
+        }
   def exec_command(command) do
     Logger.info("Executing command: #{command}")
-    # Usamos el macro exec! de Argos.Command
+    # Usamos el macro exec de Argos.Command
     result = Argos.Command.exec(command)
 
     %{
